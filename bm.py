@@ -1,68 +1,66 @@
-def get_user_input():
-    """Get user input for weight, height, and unit preference."""
-    while True:
-        try:
-            unit = input("Choose units: (1) Metric (kg, m) or (2) Imperial (lbs, inches): ")
-            if unit not in ('1', '2'):
-                print("Invalid choice. Please select 1 or 2.")
-                continue
-            
-            if unit == '1':
-                weight = float(input("Enter your weight in kilograms (kg): "))
-                height = float(input("Enter your height in meters (m): "))
-            else:
-                weight = float(input("Enter your weight in pounds (lbs): "))
-                height = float(input("Enter your height in inches (in): "))
+import gradio as gr
 
-            if weight <= 0 or height <= 0:
-                print("Weight and height must be positive numbers. Please try again.")
-                continue
+def calculate_bmi(weight, height, height_unit, age, gender):
+    try:
+        # Convert height to meters if input is in inches
+        if height_unit == "Inches":
+            height = height * 0.0254
+        
+        bmi = weight / (height ** 2)
+        bmi = round(bmi, 2)
+        
+        if bmi < 18.5:
+            status = "Underweight"
+            advice = "You should eat more nutritious food and consult a dietitian."
+        elif 18.5 <= bmi < 24.9:
+            status = "Normal weight"
+            advice = "Keep maintaining a balanced diet and regular exercise."
+        elif 25 <= bmi < 29.9:
+            status = "Overweight"
+            advice = "Consider adopting a healthy eating plan and increasing physical activity."
+        else:
+            status = "Obesity"
+            advice = "Consult a healthcare provider for a tailored weight management plan."
+        
+        if gender.lower() == "male":
+            ideal_weight = 50 + 0.9 * ((height * 100) - 152)
+        else:
+            ideal_weight = 45.5 + 0.9 * ((height * 100) - 152)
+        ideal_weight = round(ideal_weight, 2)
+        
+        return {
+            "BMI": bmi,
+            "Status": status,
+            "Advice": advice,
+            "Ideal Weight": f"{ideal_weight} kg"
+        }
+    except Exception as e:
+        return {"Error": str(e)}
 
-            return weight, height, unit
-        except ValueError:
-            print("Invalid input. Please enter numeric values for weight and height.")
+def gradio_interface(weight, height, height_unit, age, gender):
+    result = calculate_bmi(weight, height, height_unit, age, gender)
+    output = (
+        f"**BMI**: {result.get('BMI')}\n"
+        f"**Status**: {result.get('Status')}\n"
+        f"**Advice**: {result.get('Advice')}\n"
+        f"**Ideal Weight**: {result.get('Ideal Weight')}\n"
+    )
+    return output
 
-def calculate_bmi(weight, height, unit):
-    """Calculate BMI using the provided weight, height, and unit system."""
-    if unit == '2':  # Convert from imperial to metric
-        weight = weight * 0.453592  # lbs to kg
-        height = height * 0.0254  # inches to meters
-    
-    bmi = weight / (height ** 2)
-    return bmi
-
-def categorize_bmi(bmi):
-    """Categorize the BMI into different ranges."""
-    if bmi < 18.5:
-        return "Underweight"
-    elif 18.5 <= bmi < 24.9:
-        return "Normal weight"
-    elif 25 <= bmi < 29.9:
-        return "Overweight"
-    else:
-        return "Obesity"
-
-def main():
-    """Main function to execute the BMI calculator."""
-    print("Welcome to the Advanced BMI Calculator!")
-    
-    weight, height, unit = get_user_input()
-    bmi = calculate_bmi(weight, height, unit)
-    category = categorize_bmi(bmi)
-    
-    print(f"\nYour BMI is: {bmi:.2f}")
-    print(f"This is considered: {category}")
-
-    # Additional suggestions based on BMI category
-    if category == "Underweight":
-        print("Suggestion: It's important to eat a nutritious diet and possibly consult with a healthcare provider.")
-    elif category == "Normal weight":
-        print("Suggestion: Keep maintaining a balanced diet and regular physical activity.")
-    elif category == "Overweight":
-        print("Suggestion: Consider a balanced diet and regular exercise to reach a healthier weight.")
-    elif category == "Obesity":
-        print("Suggestion: It's advisable to consult with a healthcare provider for personalized advice.")
+iface = gr.Interface(
+    fn=gradio_interface,
+    inputs=[
+        gr.Number(label="Weight (kg)", value=70),
+        gr.Number(label="Height", value=1.75),
+        gr.Radio(choices=["Meters", "Inches"], label="Height Unit", value="Meters"),
+        gr.Number(label="Age (years)", value=25),
+        gr.Radio(choices=["Male", "Female"], label="Gender", value="Male")
+    ],
+    outputs="markdown",
+    title="Advanced BMI Calculator",
+    description="Calculate your BMI with options for height in meters or inches, health recommendations, and ideal weight suggestions.",
+    theme="compact"
+)
 
 if __name__ == "__main__":
-    main()
-
+    iface.launch()
